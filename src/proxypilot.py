@@ -13,13 +13,13 @@ import sys
 import threading
 import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
 from urllib.error import URLError
 from urllib.request import ProxyHandler, Request, build_opener
 import winreg
 
 APP_NAME = "ProxyPilot"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 STATE_DIR = Path(os.environ.get("APPDATA", str(Path.home()))) / APP_NAME
 BACKUP_FILE = STATE_DIR / "backup.json"
 REG_PATH = r"Software\Microsoft\Windows\CurrentVersion\Internet Settings"
@@ -88,14 +88,15 @@ class ProxyPilotApp:
     def __init__(self, root: tk.Tk):
         self.root = root
         root.title(f"ProxyPilot v{VERSION}")
-        root.geometry("760x690")
-        root.minsize(700, 620)
+        root.geometry("800x780")
+        root.minsize(740, 700)
         self.host = tk.StringVar(value="")
         self.port = tk.StringVar(value="3128")
         self.bypass = tk.StringVar(value="localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*;<local>")
         self.use_winhttp = tk.BooleanVar(value=False)
         self.use_env = tk.BooleanVar(value=True)
         self.status = tk.StringVar(value="Ready. Enter the Squid host/IP and listener port.")
+        self.app_path = tk.StringVar(value="")
         self._ui()
         STATE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -127,6 +128,14 @@ class ProxyPilotApp:
         ttk.Button(buttons, text="Restore Backup", command=self.restore).pack(side="left")
         ttk.Button(buttons, text="Reset to Direct", command=self.reset).pack(side="left", padx=8)
 
+        launch = ttk.LabelFrame(outer, text="Launch an app through this proxy", padding=10)
+        launch.pack(fill="x", pady=(8, 2))
+        ttk.Label(launch, text="Choose an application EXE. ProxyPilot starts it with HTTP_PROXY / HTTPS_PROXY / ALL_PROXY.").pack(anchor="w")
+        launch_row = ttk.Frame(launch); launch_row.pack(fill="x", pady=(5, 0))
+        ttk.Entry(launch_row, textvariable=self.app_path).pack(side="left", fill="x", expand=True)
+        ttk.Button(launch_row, text="Browse...", command=self.browse_app).pack(side="left", padx=(6, 0))
+        ttk.Button(launch_row, text="Launch via Proxy", command=self.launch_app).pack(side="left", padx=(6, 0))
+
         diag = ttk.LabelFrame(outer, text="Diagnostics", padding=10)
         diag.pack(fill="both", expand=True, pady=(9, 5))
         ttk.Label(diag, textvariable=self.status, wraplength=680).pack(anchor="w")
@@ -134,6 +143,32 @@ class ProxyPilotApp:
         self.log.pack(fill="both", expand=True, pady=(7, 0))
         ttk.Label(outer, text="Note: ProxyPilot configures proxy-aware apps; it does not force every app's traffic through Squid.",
                   foreground="#9a5b00", wraplength=700).pack(anchor="w", pady=(7, 0))
+
+    def browse_app(self):
+        path = filedialog.askopenfilename(title="Select application executable", filetypes=[("Windows applications", "*.exe"), ("All files", "*.*")])
+        if path:
+            self.app_path.set(path)
+
+    def launch_app(self):
+        try:
+            _host, _port, proxy = self.endpoint()
+        except ValueError as exc:
+            messagebox.showerror("Proxy not configured", str(exc))
+            return
+        app = Path(self.app_path.get().strip().strip(chr(34)))
+        if not app.is_file() or app.suffix.lower() != ".exe":
+            messagebox.showerror("Select an app", "Browse to the application EXE file first.")
+            return
+        env = os.environ.copy()
+        env.update({"HTTP_PROXY": proxy, "HTTPS_PROXY": proxy, "ALL_PROXY": proxy, "http_proxy": proxy, "https_proxy": proxy, "all_proxy": proxy, "NO_PROXY": "localhost,127.0.0.1", "no_proxy": "localhost,127.0.0.1"})
+        try:
+            subprocess.Popen([str(app)], cwd=str(app.parent), env=env, shell=False)
+            message = f"Launched {app.name} with proxy environment variables: {proxy}"
+            self.log_line(message)
+            self.status.set(message)
+            messagebox.showinfo("App launched", f"{app.name} was started with proxy variables.\n\nIf it still does not appear in Squid logs, the app may ignore environment proxy settings. This launcher cannot force apps that hard-code direct connections.")
+        except Exception as exc:
+            messagebox.showerror("Launch failed", str(exc))
 
     def log_line(self, message: str):
         self.log.configure(state="normal")
