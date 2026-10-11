@@ -2,7 +2,7 @@
 setlocal
 cd /d "%~dp0"
 echo ========================================
-echo ProxyPilot v1.0 - Windows EXE builder
+echo ProxyPilot v1.1 - Windows EXE builder
 echo ========================================
 where py >nul 2>nul
 if errorlevel 1 (
