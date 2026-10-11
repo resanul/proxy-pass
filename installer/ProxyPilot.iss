@@ -1,7 +1,7 @@
-; ProxyPilot v1.0 Inno Setup installer
+; ProxyPilot v1.1 Inno Setup installer
 ; Build the EXE first, then compile this script with Inno Setup 6.
 #define MyAppName "ProxyPilot"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.1.0"
 #define MyAppPublisher "ProxyPilot"
 #define MyAppExeName "ProxyPilot.exe"
 
@@ -13,7 +13,7 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={autopf}\ProxyPilot
 DefaultGroupName={#MyAppName}
 OutputDir=..\dist-installer
-OutputBaseFilename=ProxyPilot-Setup-1.0.0
+OutputBaseFilename=ProxyPilot-Setup-1.1.0
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
