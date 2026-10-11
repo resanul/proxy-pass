@@ -45,17 +45,17 @@ jobs:
         shell: pwsh
         run: |
           if (!(Test-Path "dist\ProxyPilot.exe")) { throw "EXE missing" }
-          if (!(Test-Path "dist-installer\ProxyPilot-Setup-1.0.0.exe")) { throw "Installer missing" }
+          if (!(Test-Path "dist-installer\ProxyPilot-Setup-1.1.0.exe")) { throw "Installer missing" }
           Get-FileHash dist\ProxyPilot.exe -Algorithm SHA256 | Format-List
-          Get-FileHash dist-installer\ProxyPilot-Setup-1.0.0.exe -Algorithm SHA256 | Format-List
+          Get-FileHash dist-installer\ProxyPilot-Setup-1.1.0.exe -Algorithm SHA256 | Format-List
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ProxyPilot-Windows-v1.0
+          name: ProxyPilot-Windows-v1.1
           path: |
             dist/ProxyPilot.exe
-            dist-installer/ProxyPilot-Setup-1.0.0.exe
+            dist-installer/ProxyPilot-Setup-1.1.0.exe
           if-no-files-found: error
           retention-days: 30
 
@@ -68,4 +68,4 @@ jobs:
           prerelease: false
           files: |
             dist/ProxyPilot.exe
-            dist-installer/ProxyPilot-Setup-1.0.0.exe
+            dist-installer/ProxyPilot-Setup-1.1.0.exe
