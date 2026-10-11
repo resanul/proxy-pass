@@ -1,0 +1,71 @@
+name: Windows build and release
+
+on:
+  push:
+    branches: [main, "release/**", "feature/**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Build EXE
+        run: python -m PyInstaller --noconfirm --clean --onefile --windowed --name ProxyPilot --version-file version_info.txt src/proxypilot.py
+
+      - name: Install Inno Setup
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist-installer | Out-Null
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\ProxyPilot.iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup build failed" }
+
+      - name: Smoke test artifact files
+        shell: pwsh
+        run: |
+          if (!(Test-Path "dist\ProxyPilot.exe")) { throw "EXE missing" }
+          if (!(Test-Path "dist-installer\ProxyPilot-Setup-1.0.0.exe")) { throw "Installer missing" }
+          Get-FileHash dist\ProxyPilot.exe -Algorithm SHA256 | Format-List
+          Get-FileHash dist-installer\ProxyPilot-Setup-1.0.0.exe -Algorithm SHA256 | Format-List
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProxyPilot-Windows-v1.0
+          path: |
+            dist/ProxyPilot.exe
+            dist-installer/ProxyPilot-Setup-1.0.0.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release for version tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ProxyPilot ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: |
+            dist/ProxyPilot.exe
+            dist-installer/ProxyPilot-Setup-1.0.0.exe
