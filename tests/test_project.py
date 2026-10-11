@@ -22,7 +22,7 @@ class ProjectPackageTests(unittest.TestCase):
 
     def test_version_is_declared(self):
         source = (ROOT / "src" / "proxypilot.py").read_text(encoding="utf-8")
-        self.assertIn('VERSION = "1.0.0"', source)
+        self.assertIn('VERSION = "1.1.0"', source)
 
 if __name__ == "__main__":
     unittest.main()
